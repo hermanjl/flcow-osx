@@ -1,0 +1,57 @@
+*
+*  FL-COW by Davide Libenzi ( File Links Copy On Write )
+*  Copyright (C) 2003  Davide Libenzi
+*
+*  This program is free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation; either version 2 of the License, or
+*  (at your option) any later version.
+*
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with this program; if not, write to the Free Software
+*  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*
+*  Davide Libenzi <davidel@xmailserver.org>
+*
+
+The preload library perform Copy On Write on files having hard links.
+The environment variable FLCOW_PATH tells the library which paths are
+allowed to be FL-COWed. For example :
+
+FLCOW_PATH=/home/davide/arch-projects/:/home/davide/test-flcow/
+
+Anything that is inside :
+
+/home/davide/arch-projects/*
+
+and inside /home/davide/test-flcow/*
+
+will be FL-COWed if its st_nlink > 1. To have the library effective
+you simply set your FLCOW_PATH :
+
+export FLCOW_PATH=...
+
+and you also set :
+
+export LD_PRELOAD=$LD_PRELOAD:/usr/lib/libflcow.so
+
+I usually export this in my developer shell. To test the library after
+a build you can use :
+
+$ LD_PRELOAD=./fl-cow/.libs/libflcow.so ./test/flcow-test
+
+Or simply :
+
+$ make check
+
+
+
+Enjoy,
+		Davide
+
+

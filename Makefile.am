@@ -1,0 +1,2 @@
+SUBDIRS = . fl-cow test
+

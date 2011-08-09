@@ -1,0 +1,154 @@
+<!DOCTYPE doctype PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+  <meta http-equiv="Content-Type"
+ content="text/html; charset=windows-1252">
+  <meta name="Author" content="Davide Libenzi">
+  <meta name="Description"
+ content="File Links Copy On Write (FL-COW) Home Page">
+  <meta name="GENERATOR" content="Emacs">
+  <meta name="Keywords" content="hard,link,file,copy,write,unix">
+  <title>FL-COW Home Page</title>
+</head>
+<body
+ style="color: rgb(0, 0, 255); background-color: rgb(255, 255, 255);">
+<p style="font-family: monospace;" align="center"><b>FL-COW
+Home Page<br>
+</b><a href="http://www.xmailserver.org/davide.html"><br>
+</a></p>
+<span style="font-family: monospace;">The library born
+to solve a problem I had when working with the </span><a
+ style="font-family: monospace;" href="http://www.kernel.org">Linux
+Kernel</a><span style="font-family: monospace;"> archives that I use to
+replicate using hard links. Replicating archives with hard links is
+both fast and space saving, and it helped me a lot in speeding up my
+operations when working on the kernel source. A recent </span><a
+ style="font-family: monospace;"
+ href="http://www.gnu.org/software/gnu-arch/">Arch</a><span
+ style="font-family: monospace;">'s mailing list
+thread that suggested that use of hard links to create archive cached
+revisions pushed me to write the FL-COW library. What is the problem
+with hard links when, for example, I'm working with kernel sources? The
+problem is that I do a:</span><br style="font-family: monospace;">
+<br style="font-family: monospace;">
+<span style="font-family: monospace;">$ </span><span
+ style="font-style: italic; font-family: monospace;">cp -al
+linux-2.6-test6
+linux-2.6-test6.vm-fix</span><br style="font-family: monospace;">
+<br style="font-family: monospace;">
+<span style="font-family: monospace;">This command replicate at light
+speed the </span><span
+ style="font-style: italic; font-family: monospace;">vanilla</span><span
+ style="font-family: monospace;"> (Linus) archive into an
+archive I can start hacking on. The problem is that I have to manually
+remember to break hard links on files I start working on, otherwise
+even the original copy get modified. This might break because I forgot
+doing so and it might also break because other tools might eventually </span><span
+ style="font-style: italic; font-family: monospace;">touch</span><span
+ style="font-family: monospace;"> file they were not supposed
+to
+touch. If it happens that I forget to decouple a file hard link, the
+next command:</span><br style="font-family: monospace;">
+<br style="font-family: monospace;">
+<span style="font-family: monospace;">$ </span><span
+ style="font-style: italic; font-family: monospace;">diff -Nru
+linux-2.6-test6
+linux-2.6-test6.vm-fix</span><br style="font-family: monospace;">
+<br style="font-family: monospace;">
+<span style="font-family: monospace;">will skip all changes done on the
+file I forgot, because my changes has
+been applied to the original file also. The library works by
+intercepting all file open operations happening inside a configured
+path list, and by decoupling the hard link with a COW if a write
+operation is requested. The library is installed using the environment
+variable </span><span
+ style="font-weight: bold; font-family: monospace;">LD_PRELOAD</span><span
+ style="font-family: monospace;"> and in
+this
+way it is able to hook glibc </span><span
+ style="font-style: italic; font-family: monospace;">open(2)</span><span
+ style="font-family: monospace;">
+functions and it is able to perform the COW when necessary. The
+environment variable </span><span
+ style="font-weight: bold; font-family: monospace;">FLCOW_PATH</span><span
+ style="font-family: monospace;">
+control which paths should be subject to COWing. The logic that the
+library follow to know if a file should be COWed is the following:</span><br
+ style="font-family: monospace;">
+<br style="font-family: monospace;">
+<ol style="font-family: monospace;">
+  <li>Is the file being opened with O_RDWR or O_WRONLY
+modes?</li>
+  <li>Is the file inside one of the paths listed inside
+the <span style="font-weight: bold;">FLCOW_PATH</span> environment
+variable?</li>
+  <li>Is the file being opened a regular file?</li>
+  <li>Is the (struct stat)-&gt;st_nlink variable
+greater than one?</li>
+</ol>
+<span style="font-family: monospace;">If </span><span
+ style="font-weight: bold; font-family: monospace;">all</span><span
+ style="font-family: monospace;"> those answers are </span><span
+ style="font-weight: bold; font-family: monospace;">yes</span><span
+ style="font-family: monospace;">, the file is COWed by leaving
+the calling application with a non hard linked version of the file. To
+setup the library you must start with building it doing a (for example):</span><br
+ style="font-family: monospace;">
+<br style="font-family: monospace;">
+<span style="font-family: monospace;">$ </span><span
+ style="font-style: italic; font-family: monospace;">./configure
+--prefix=/usr</span><br style="font-family: monospace;">
+<span style="font-family: monospace;">$ </span><span
+ style="font-style: italic; font-family: monospace;">make</span><br
+ style="font-family: monospace;">
+<span style="font-family: monospace;">$ </span><span
+ style="font-style: italic; font-family: monospace;">make check</span><br
+ style="font-family: monospace;">
+<span style="font-family: monospace;">$ </span><span
+ style="font-style: italic; font-family: monospace;">su</span><br
+ style="font-family: monospace;">
+<span style="font-family: monospace;"># </span><span
+ style="font-style: italic; font-family: monospace;">make install</span><br
+ style="font-family: monospace;">
+<br style="font-family: monospace;">
+<span style="font-family: monospace;">If all those steps complete
+correctly you will have your library
+installed in </span><span
+ style="font-style: italic; font-family: monospace;">/usr/lib/libflcow.so</span><span
+ style="font-family: monospace;">
+that is ready for use. I use to set the </span><span
+ style="font-weight: bold; font-family: monospace;">LD_PRELOAD</span><span
+ style="font-family: monospace;">
+inside my </span><span
+ style="font-style: italic; font-family: monospace;">.bashrc</span><span
+ style="font-family: monospace;"> file so
+that
+I am sure that no tool will screw up my hard-linked archives. This is
+the relevant section of my </span><span
+ style="font-style: italic; font-family: monospace;">.bashrc</span><span
+ style="font-family: monospace;">
+file:</span><br style="font-family: monospace;">
+<br style="font-family: monospace;">
+<span style="font-style: italic; font-family: monospace;">export
+LD_PRELOAD=/usr/lib/libflcow.so:$LD_PRELOAD</span><br
+ style="font-style: italic; font-family: monospace;">
+<span style="font-style: italic; font-family: monospace;">export
+FLCOW_PATH=/usr/src/:/home/davide/arch-archives/</span><br
+ style="font-style: italic; font-family: monospace;">
+<br style="font-family: monospace;">
+<span style="font-family: monospace;">The library source code is
+available here:</span><br style="font-family: monospace;">
+<br style="font-family: monospace;">
+<a style="font-family: monospace;" href="fl-cow-0.10.tar.gz">FL-COW</a><span
+ style="font-family: monospace;">&nbsp;&nbsp;&nbsp; 0.10</span><br
+ style="font-family: monospace;">
+<br style="font-family: monospace;">
+<br style="font-family: monospace;">
+<br style="font-family: monospace;">
+<a style="font-family: monospace;" href="/davide.html">Back Home</a><br
+ style="font-family: monospace;">
+<br style="font-family: monospace;">
+<br style="font-family: monospace;">
+<p style="font-family: monospace;" align="left"> </p>
+</body>
+</html>
