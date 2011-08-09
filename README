@@ -55,3 +55,14 @@ Enjoy,
 		Davide
 
 
+*
+* Clearspring Mac Changes
+*
+After calling ./configure, run ./make_osx.sh instead of make to create Mac libraries.
+Two variables must be set on a mac. The first points at the library:
+
+export DYLD_INSERT_LIBRARIES=${mac_lib}
+
+The second forces the Mac to use the libraries in that variable:
+
+export DYLD_FORCE_FLAT_NAMESPACE=1

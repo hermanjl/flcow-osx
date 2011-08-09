@@ -57,10 +57,20 @@
 #define REAL_LIBC RTLD_NEXT
 #define FLCLOW_MAXPATH 1024
 
+#if defined(__APPLE__) || defined(__MACOSX__)
+#define AT_FDCWD -100
+#define openat(dfd, name, flags, args...) open(name, flags, ## args)
+#define FLCOW_MAP_FUNC(sym) sym
+#define FLCOW_MAP_ALIAS(sym, type) /* Aliases are unnecessary under OSX */
+#else
+#define FLCOW_MAP_FUNC(sym) flcow_##sym
+#define FLCOW_MAP_ALIAS(sym, type) FLCOW_ ##type##_ALIAS(sym, sym)
+#endif
+
 #define FLCOW_OPEN_ALIAS(asym, rsym) int asym(char const *, int, ...)	\
 	__attribute__ ((alias("flcow_" #rsym)))
 #define FLCOW_MAP_OPEN(sym)						\
-	int flcow_##sym(char const *name, int flags, ...) {		\
+	int FLCOW_MAP_FUNC(sym)(char const *name, int flags, ...) {	\
 		static int (*func_open)(char const *, int, ...) = NULL; \
 		va_list args;						\
 		mode_t mode;						\
@@ -73,16 +83,20 @@
 		va_start(args, flags);					\
 		mode = (mode_t) va_arg(args, int);			\
 		va_end(args);						\
-		DPRINTF("%s[%p](%s, 0x%x, 0x%x)\n", __FUNCTION__, flcow_##sym, name, \
+		DPRINTF("[%s](%s, 0x%x, 0x%x)\n", __FUNCTION__, name,	\
 			flags, mode);					\
 		return do_generic_open(name, flags, mode, func_open);	\
 	}								\
-	FLCOW_OPEN_ALIAS(sym, sym)
+	FLCOW_MAP_ALIAS(sym, OPEN)
 
+
+#if defined(__APPLE__) || defined(__MACOSX__)
+#define FLCOW_MAP_OPENAT(sym) /* There is no openat in OSX */
+#else
 #define FLCOW_OPENAT_ALIAS(asym, rsym) int asym(int, char const *, int, ...) \
 	__attribute__ ((alias("flcow_" #rsym)))
 #define FLCOW_MAP_OPENAT(sym)						\
-	int flcow_##sym(int dirfd, char const *name, int flags, ...) {	\
+	int FLCOW_MAP_FUNC(sym)(int dirfd, char const *name, int flags, ...) {	\
 		static int (*func_open)(int, char const *, int, ...) = NULL; \
 		va_list args;						\
 		mode_t mode;						\
@@ -95,16 +109,17 @@
 		va_start(args, flags);					\
 		mode = (mode_t) va_arg(args, int);			\
 		va_end(args);						\
-		DPRINTF("%s[%p](%s, 0x%x, 0x%x)\n", __FUNCTION__, flcow_##sym, name, \
+		DPRINTF("[%s](%s, 0x%x, 0x%x)\n", __FUNCTION__, name,	\
 			flags, mode);					\
 		return do_generic_openat(dirfd, name, flags, mode, func_open); \
 	}								\
-	FLCOW_OPENAT_ALIAS(sym, sym)
+	FLCOW_MAP_ALIAS(sym, OPENAT)
+#endif
 
 #define FLCOW_FOPEN_ALIAS(asym, rsym) FILE *asym(char const *, char const *) \
 	__attribute__ ((alias("flcow_" #rsym)))
 #define FLCOW_MAP_FOPEN(sym)						\
-	FILE *flcow_##sym(char const *name, char const *mode) {		\
+	FILE * FLCOW_MAP_FUNC(sym)(char const *name, char const *mode) { \
 		static FILE *(*func_open)(char const *, char const *) = NULL; \
 		if (!func_open &&					\
 		    !(func_open = (FILE *(*)(char const *, char const *)) \
@@ -112,15 +127,15 @@
 			fprintf(stderr, "missing symbol: %s\n", #sym);	\
 			exit(1);					\
 		}							\
-		DPRINTF("%s[%p](%s, '%s')\n", __FUNCTION__, flcow_##sym, name, mode); \
+		DPRINTF("[%s](%s, '%s')\n", __FUNCTION__, name, mode);	\
 		return do_generic_fopen(name, mode, func_open);		\
 	}								\
-	FLCOW_FOPEN_ALIAS(sym, sym)
+	FLCOW_MAP_ALIAS(sym, FOPEN)
 
 #define FLCOW_FREOPEN_ALIAS(asym, rsym) FILE *asym(char const *, char const *, FILE *) \
 	__attribute__ ((alias("flcow_" #rsym)))
 #define FLCOW_MAP_FREOPEN(sym)						\
-	FILE *flcow_##sym(char const *name, char const *mode, FILE *file) { \
+	FILE * FLCOW_MAP_FUNC(sym)(char const *name, char const *mode, FILE *file) { \
 		static FILE *(*func_open)(char const *, char const *, FILE *) = NULL; \
 		if (!func_open &&					\
 		    !(func_open = (FILE *(*)(char const *, char const *, FILE *)) \
@@ -128,10 +143,10 @@
 			fprintf(stderr, "missing symbol: %s\n", #sym);	\
 			exit(1);					\
 		}							\
-		DPRINTF("%s[%p](%s, '%s')\n", __FUNCTION__, flcow_##sym, name, mode); \
+		DPRINTF("[%s](%s, '%s')\n", __FUNCTION__, name, mode);	\
 		return do_generic_freopen(name, mode, file, func_open);	\
-	}								\
-	FLCOW_FREOPEN_ALIAS(sym, sym)
+	}
+	FLCOW_MAP_ALIAS(sym, FREOPEN)
 
 
 
