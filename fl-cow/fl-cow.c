@@ -145,7 +145,7 @@
 		}							\
 		DPRINTF("[%s](%s, '%s')\n", __FUNCTION__, name, mode);	\
 		return do_generic_freopen(name, mode, file, func_open);	\
-	}
+	}                                                               \
 	FLCOW_MAP_ALIAS(sym, FREOPEN)
 
 
